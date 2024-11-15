@@ -1,0 +1,46 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+from scipy.optimize import minimize
+
+# Step 1: Generate Synthetic Data
+np.random.seed(42)
+true_mu, true_sigma = 5, 2  # True parameters
+data = np.random.normal(loc=true_mu, scale=true_sigma, size=100)
+
+# Step 2: Variance Calculation
+sample_mean = np.mean(data)
+sample_variance = np.var(data, ddof=1)  # Unbiased sample variance
+print(f"Sample Mean: {sample_mean:.4f}")
+print(f"Sample Variance: {sample_variance:.4f}")
+
+# Step 3: Log-Likelihood Function for Normal Distribution
+def negative_log_likelihood(params):
+    mu, sigma = params
+    if sigma <= 0:  # Ensure valid sigma
+        return np.inf
+    return -np.sum(norm.logpdf(data, loc=mu, scale=sigma))
+
+# Step 4: Maximum Likelihood Estimation (MLE)
+initial_guess = [0, 1]  # Initial guess for mu and sigma
+result = minimize(negative_log_likelihood, initial_guess, bounds=[(None, None), (1e-3, None)])
+estimated_mu, estimated_sigma = result.x
+print("\nEstimated Parameters (MLE):")
+print(f"Estimated Mean (mu): {estimated_mu:.4f}")
+print(f"Estimated Standard Deviation (sigma): {estimated_sigma:.4f}")
+
+# Step 5: Visualization
+x = np.linspace(min(data) - 1, max(data) + 1, 1000)
+pdf_true = norm.pdf(x, loc=true_mu, scale=true_sigma)  # True distribution
+pdf_estimated = norm.pdf(x, loc=estimated_mu, scale=estimated_sigma)  # Estimated distribution
+
+plt.figure(figsize=(10, 6))
+plt.hist(data, bins=15, density=True, alpha=0.6, label="Data Histogram")
+plt.plot(x, pdf_true, label=f"True Distribution (μ={true_mu}, σ={true_sigma})", color="blue", linestyle="--")
+plt.plot(x, pdf_estimated, label=f"Estimated Distribution (μ={estimated_mu:.2f}, σ={estimated_sigma:.2f})", color="red")
+plt.title("Normal Distribution: True vs Estimated")
+plt.xlabel("Value")
+plt.ylabel("Density")
+plt.legend()
+plt.grid()
+plt.show()
