@@ -1,0 +1,100 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Generate synthetic data (simple linear relationship)
+np.random.seed(42)
+X = np.random.rand(100, 1) * 10  # Input features
+y = 3 * X + 7 + np.random.randn(100, 1) * 2  # Linear function with noise
+
+# Normalize data for stable training
+X_mean, X_std = X.mean(), X.std()
+y_mean, y_std = y.mean(), y.std()
+X_normalized = (X - X_mean) / X_std
+y_normalized = (y - y_mean) / y_std
+
+# Neural Network with one hidden layer
+class NeuralNetwork:
+    def __init__(self, input_size, hidden_size, output_size):
+        # Initialize weights and biases
+        self.W1 = np.random.randn(input_size, hidden_size) * 0.1
+        self.b1 = np.zeros((1, hidden_size))
+        self.W2 = np.random.randn(hidden_size, output_size) * 0.1
+        self.b2 = np.zeros((1, output_size))
+
+    def forward(self, X):
+        # Forward pass
+        self.Z1 = np.dot(X, self.W1) + self.b1
+        self.A1 = np.tanh(self.Z1)  # Activation function
+        self.Z2 = np.dot(self.A1, self.W2) + self.b2
+        return self.Z2  # Linear output (no activation)
+
+    def compute_loss(self, y_pred, y_true):
+        # Mean Squared Error (Least Squares)
+        return np.mean((y_pred - y_true) ** 2)
+
+    def backward(self, X, y_true, y_pred, learning_rate):
+        # Backpropagation
+        m = X.shape[0]
+        dZ2 = (y_pred - y_true) / m  # Derivative of loss w.r.t Z2
+        dW2 = np.dot(self.A1.T, dZ2)
+        db2 = np.sum(dZ2, axis=0, keepdims=True)
+
+        dA1 = np.dot(dZ2, self.W2.T)
+        dZ1 = dA1 * (1 - np.tanh(self.Z1) ** 2)  # Derivative of tanh
+        dW1 = np.dot(X.T, dZ1)
+        db1 = np.sum(dZ1, axis=0, keepdims=True)
+
+        # Update weights and biases
+        self.W1 -= learning_rate * dW1
+        self.b1 -= learning_rate * db1
+        self.W2 -= learning_rate * dW2
+        self.b2 -= learning_rate * db2
+
+# Train the Neural Network
+def train_neural_network(nn, X, y, epochs=1000, learning_rate=0.01):
+    losses = []
+    for epoch in range(epochs):
+        # Forward pass
+        y_pred = nn.forward(X)
+        # Compute loss
+        loss = nn.compute_loss(y_pred, y)
+        losses.append(loss)
+        # Backward pass and update
+        nn.backward(X, y, y_pred, learning_rate)
+        # Print loss every 100 epochs
+        if epoch % 100 == 0:
+            print(f"Epoch {epoch}, Loss: {loss:.4f}")
+    return losses
+
+# Initialize the neural network
+nn = NeuralNetwork(input_size=1, hidden_size=10, output_size=1)
+
+# Train the network
+losses = train_neural_network(nn, X_normalized, y_normalized, epochs=1000, learning_rate=0.01)
+
+# Predict using the trained network
+y_pred_normalized = nn.forward(X_normalized)
+
+# Denormalize predictions
+y_pred = y_pred_normalized * y_std + y_mean
+
+# Plot results
+plt.figure(figsize=(10, 6))
+plt.scatter(X, y, label="True Data", alpha=0.7)
+plt.plot(X, y_pred, label="Predicted (NN)", color="red")
+plt.title("Neural Network Regression")
+plt.xlabel("X")
+plt.ylabel("y")
+plt.legend()
+plt.grid()
+plt.show()
+
+# Plot training loss
+plt.figure(figsize=(10, 6))
+plt.plot(losses, label="Training Loss")
+plt.title("Training Loss Over Epochs")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+plt.grid()
+plt.show()
