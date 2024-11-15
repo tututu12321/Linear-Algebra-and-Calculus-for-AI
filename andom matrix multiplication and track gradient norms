@@ -1,0 +1,50 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameters
+matrix_size = 100  # Size of the random matrix (e.g., 100x100)
+num_layers = 50  # Number of layers (depth)
+scale = 1.0 / np.sqrt(matrix_size)  # Scaling factor for initialization
+
+# Generate random matrices for each layer
+np.random.seed(42)
+random_matrices = [np.random.randn(matrix_size, matrix_size) * scale for _ in range(num_layers)]
+
+# Initialize a gradient vector
+gradient = np.random.randn(matrix_size)
+
+# Store norms and singular values for analysis
+gradient_norms = []
+singular_values_all_layers = []
+
+# Perform random matrix multiplication and track gradient norms
+for i, matrix in enumerate(random_matrices):
+    gradient = np.dot(matrix, gradient)  # Propagate the gradient
+    gradient_norms.append(np.linalg.norm(gradient))  # Compute the norm
+    _, singular_values, _ = np.linalg.svd(matrix)  # Perform SVD
+    singular_values_all_layers.append(singular_values)
+
+# Singular values of the first and last layers for visualization
+singular_values_first = singular_values_all_layers[0]
+singular_values_last = singular_values_all_layers[-1]
+
+# Plot gradient norm evolution
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, num_layers + 1), gradient_norms, label='Gradient Norm')
+plt.title("Gradient Norm Across Layers")
+plt.xlabel("Layer")
+plt.ylabel("Gradient Norm")
+plt.grid()
+plt.legend()
+plt.show()
+
+# Plot singular value distribution of the first and last layers
+plt.figure(figsize=(10, 6))
+plt.hist(singular_values_first, bins=30, alpha=0.7, label='First Layer')
+plt.hist(singular_values_last, bins=30, alpha=0.7, label='Last Layer')
+plt.title("Singular Value Distribution (First vs. Last Layer)")
+plt.xlabel("Singular Value")
+plt.ylabel("Frequency")
+plt.legend()
+plt.grid()
+plt.show()
