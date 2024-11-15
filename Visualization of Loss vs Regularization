@@ -1,0 +1,95 @@
+import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+
+# Step 1: Create a Ratings Matrix with Missing Values
+ratings_data = {
+    "Item 1": [5, 4, np.nan, 3, np.nan],
+    "Item 2": [3, np.nan, 4, 5, 2],
+    "Item 3": [np.nan, 2, 5, np.nan, 4],
+    "Item 4": [4, 5, np.nan, 4, 3],
+    "Item 5": [np.nan, 3, 2, np.nan, 5],
+}
+ratings_matrix = pd.DataFrame(ratings_data, index=["User 1", "User 2", "User 3", "User 4", "User 5"])
+print("Original Ratings Matrix:\n", ratings_matrix)
+
+# Step 2: Define the Loss Function (MSE with Regularization)
+def loss_function(params, ratings_matrix, num_users, num_items, num_factors, reg_lambda):
+    """
+    Computes the loss (MSE with regularization).
+    params: Flattened array of user and item latent factors
+    ratings_matrix: User-Item matrix
+    num_users: Number of users
+    num_items: Number of items
+    num_factors: Number of latent factors
+    reg_lambda: Regularization hyperparameter
+    """
+    user_factors = params[:num_users * num_factors].reshape((num_users, num_factors))
+    item_factors = params[num_users * num_factors:].reshape((num_items, num_factors))
+    
+    # Predicted ratings
+    predicted_ratings = np.dot(user_factors, item_factors.T)
+    
+    # Residual matrix: difference where ratings are observed
+    residual_matrix = ratings_matrix - predicted_ratings
+    mask = ~np.isnan(ratings_matrix)  # Ignore NaN values
+    mse_loss = np.sum((residual_matrix[mask]) ** 2) / np.sum(mask)
+    
+    # Regularization term
+    reg_loss = reg_lambda * (np.sum(user_factors ** 2) + np.sum(item_factors ** 2))
+    
+    return mse_loss + reg_loss
+
+# Step 3: Initialize User and Item Latent Factors
+num_users, num_items = ratings_matrix.shape
+num_factors = 2  # Number of latent factors
+reg_lambda = 0.1  # Regularization hyperparameter
+
+# Random initialization
+np.random.seed(42)
+user_factors_init = np.random.rand(num_users, num_factors)
+item_factors_init = np.random.rand(num_items, num_factors)
+params_init = np.hstack([user_factors_init.ravel(), item_factors_init.ravel()])
+
+# Step 4: Optimize the Loss Function
+result = minimize(
+    loss_function,
+    params_init,
+    args=(ratings_matrix.values, num_users, num_items, num_factors, reg_lambda),
+    method="L-BFGS-B",
+    options={"disp": True}
+)
+
+# Extract optimized user and item factors
+optimized_params = result.x
+user_factors = optimized_params[:num_users * num_factors].reshape((num_users, num_factors))
+item_factors = optimized_params[num_users * num_factors:].reshape((num_items, num_factors))
+
+# Step 5: Predicted Ratings Matrix
+predicted_ratings = np.dot(user_factors, item_factors.T)
+predicted_ratings_df = pd.DataFrame(predicted_ratings, index=ratings_matrix.index, columns=ratings_matrix.columns)
+print("\nPredicted Ratings Matrix:\n", predicted_ratings_df)
+
+# Step 6: Hyperparameter Tuning (Regularization Lambda)
+lambdas = [0.01, 0.1, 1, 10]
+losses = []
+
+for reg_lambda in lambdas:
+    result = minimize(
+        loss_function,
+        params_init,
+        args=(ratings_matrix.values, num_users, num_items, num_factors, reg_lambda),
+        method="L-BFGS-B"
+    )
+    losses.append(result.fun)
+
+# Visualization of Loss vs Regularization
+plt.figure(figsize=(8, 6))
+plt.plot(lambdas, losses, marker="o", linestyle="--")
+plt.xscale("log")
+plt.title("Effect of Regularization on Loss")
+plt.xlabel("Regularization Lambda")
+plt.ylabel("Loss")
+plt.grid()
+plt.show()
