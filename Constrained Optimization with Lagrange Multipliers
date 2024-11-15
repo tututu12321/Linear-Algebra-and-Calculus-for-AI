@@ -1,0 +1,23 @@
+import sympy as sp
+
+# Define variables
+x, y, λ = sp.symbols('x y λ')
+
+# Define the objective function f(x, y) (to maximize or minimize)
+f = x**2 + y**2  # Example: Minimize x^2 + y^2
+
+# Define the constraint g(x, y) = 0
+g = x + y - 1  # Example: x + y = 1
+
+# Lagrange function
+L = f + λ * g
+
+# Solve the system of equations (∂L/∂x = 0, ∂L/∂y = 0, ∂L/∂λ = 0)
+gradients = [sp.diff(L, var) for var in (x, y, λ)]
+solutions = sp.solve(gradients, (x, y, λ))
+
+# Output results
+for i, sol in enumerate(solutions):
+    print(f"Solution {i + 1}: x = {sol[x]:.4f}, y = {sol[y]:.4f}, λ = {sol[λ]:.4f}")
+    f_value = f.subs(sol)
+    print(f"Objective Function Value at Solution {i + 1}: f(x, y) = {f_value:.4f}\n")
