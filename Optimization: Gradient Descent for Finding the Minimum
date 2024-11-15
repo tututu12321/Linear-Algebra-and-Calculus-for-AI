@@ -1,0 +1,43 @@
+import numpy as np
+
+# Define the function to be optimized
+def f(x):
+    return x**2 + 4*x + 4  # Example: (x + 2)^2 has a minimum at x = -2
+
+# Derivative of the function
+def df(x):
+    return 2*x + 4  # f'(x) = 2x + 4
+
+# Gradient descent implementation
+def gradient_descent(learning_rate=0.1, max_iter=100, tolerance=1e-6):
+    x = np.random.uniform(-10, 10)  # Randomly initialize x
+    for i in range(max_iter):
+        grad = df(x)  # Compute the gradient
+        x_new = x - learning_rate * grad  # Update x in the direction of the gradient
+
+        # Convergence condition: stop if the change is below a threshold
+        if abs(x_new - x) < tolerance:
+            break
+        x = x_new
+    
+    return x, f(x), i
+
+# Run gradient descent
+x_min, f_min, iterations = gradient_descent(learning_rate=0.1)
+print(f"Minimum: x = {x_min:.6f}, f(x) = {f_min:.6f}, Iterations: {iterations}")
+
+# Visualization
+import matplotlib.pyplot as plt
+
+x_vals = np.linspace(-10, 2, 100)
+y_vals = f(x_vals)
+
+plt.figure(figsize=(8, 6))
+plt.plot(x_vals, y_vals, label="f(x) = x^2 + 4x + 4")
+plt.scatter(x_min, f_min, color='red', label=f"Minimum (x={x_min:.2f})")
+plt.title("Optimization: Gradient Descent for Finding the Minimum")
+plt.xlabel("x")
+plt.ylabel("f(x)")
+plt.legend()
+plt.grid()
+plt.show()
