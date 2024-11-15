@@ -1,0 +1,137 @@
+
+import torch
+import torch.nn as nn
+import math
+
+# Positional Encoding
+class PositionalEncoding(nn.Module):
+    def __init__(self, embed_dim, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.encoding = torch.zeros(max_len, embed_dim)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, embed_dim, 2).float() * (-math.log(10000.0) / embed_dim))
+        self.encoding[:, 0::2] = torch.sin(position * div_term)
+        self.encoding[:, 1::2] = torch.cos(position * div_term)
+        self.encoding = self.encoding.unsqueeze(0)
+
+    def forward(self, x):
+        return x + self.encoding[:, :x.size(1), :].to(x.device)
+
+# Multi-Head Attention with Query, Key, Value
+class MultiHeadAttention(nn.Module):
+    def __init__(self, embed_dim, num_heads):
+        super(MultiHeadAttention, self).__init__()
+        assert embed_dim % num_heads == 0
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+
+        self.q_proj = nn.Linear(embed_dim, embed_dim)
+        self.k_proj = nn.Linear(embed_dim, embed_dim)
+        self.v_proj = nn.Linear(embed_dim, embed_dim)
+        self.o_proj = nn.Linear(embed_dim, embed_dim)
+        self.scaling = self.head_dim ** -0.5
+
+    def forward(self, query, key, value, mask=None):
+        B, N, _ = query.size()
+        _, S, _ = key.size()
+
+        q = self.q_proj(query).reshape(B, N, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        k = self.k_proj(key).reshape(B, S, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        v = self.v_proj(value).reshape(B, S, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+
+        scores = torch.matmul(q, k.transpose(-2, -1)) * self.scaling
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+        attn = torch.softmax(scores, dim=-1)
+
+        output = torch.matmul(attn, v).transpose(1, 2).reshape(B, N, -1)
+        return self.o_proj(output)
+
+# Feed-Forward Network
+class FeedForward(nn.Module):
+    def __init__(self, embed_dim, ff_dim):
+        super(FeedForward, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(embed_dim, ff_dim),
+            nn.ReLU(),
+            nn.Linear(ff_dim, embed_dim)
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+# Transformer Encoder Block
+class TransformerEncoderBlock(nn.Module):
+    def __init__(self, embed_dim, num_heads, ff_dim):
+        super(TransformerEncoderBlock, self).__init__()
+        self.attn = MultiHeadAttention(embed_dim, num_heads)
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.ff = FeedForward(embed_dim, ff_dim)
+        self.norm2 = nn.LayerNorm(embed_dim)
+
+    def forward(self, x, mask=None):
+        x = self.norm1(x + self.attn(x, x, x, mask))
+        x = self.norm2(x + self.ff(x))
+        return x
+
+# Transformer Decoder Block with Cross-Attention
+class TransformerDecoderBlock(nn.Module):
+    def __init__(self, embed_dim, num_heads, ff_dim):
+        super(TransformerDecoderBlock, self).__init__()
+        self.self_attn = MultiHeadAttention(embed_dim, num_heads)
+        self.cross_attn = MultiHeadAttention(embed_dim, num_heads)
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.norm2 = nn.LayerNorm(embed_dim)
+        self.ff = FeedForward(embed_dim, ff_dim)
+        self.norm3 = nn.LayerNorm(embed_dim)
+
+    def forward(self, x, enc_output, src_mask=None, tgt_mask=None):
+        x = self.norm1(x + self.self_attn(x, x, x, tgt_mask))  # Self-attention
+        x = self.norm2(x + self.cross_attn(x, enc_output, enc_output, src_mask))  # Cross-attention
+        x = self.norm3(x + self.ff(x))  # Feed-forward
+        return x
+
+# Transformer Model
+class Transformer(nn.Module):
+    def __init__(self, vocab_size, embed_dim, num_heads, ff_dim, num_enc_layers, num_dec_layers):
+        super(Transformer, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.positional_encoding = PositionalEncoding(embed_dim)
+        self.encoder = nn.ModuleList([TransformerEncoderBlock(embed_dim, num_heads, ff_dim) for _ in range(num_enc_layers)])
+        self.decoder = nn.ModuleList([TransformerDecoderBlock(embed_dim, num_heads, ff_dim) for _ in range(num_dec_layers)])
+        self.fc_out = nn.Linear(embed_dim, vocab_size)
+
+    def forward(self, src, tgt, src_mask=None, tgt_mask=None):
+        src = self.positional_encoding(self.embedding(src))
+        tgt = self.positional_encoding(self.embedding(tgt))
+
+        for layer in self.encoder:
+            src = layer(src, src_mask)
+
+        for layer in self.decoder:
+            tgt = layer(tgt, src, src_mask, tgt_mask)
+
+        return self.fc_out(tgt)
+
+# Masked Multi-Head Attention
+def generate_square_subsequent_mask(sz):
+    mask = torch.triu(torch.ones(sz, sz), diagonal=1).type(torch.bool)
+    return mask
+
+# Test the Transformer
+vocab_size = 10000
+embed_dim = 512
+num_heads = 8
+ff_dim = 2048
+num_enc_layers = 6
+num_dec_layers = 6
+
+model = Transformer(vocab_size, embed_dim, num_heads, ff_dim, num_enc_layers, num_dec_layers)
+src = torch.randint(0, vocab_size, (32, 10))
+tgt = torch.randint(0, vocab_size, (32, 10))
+
+src_mask = None
+tgt_mask = generate_square_subsequent_mask(tgt.size(1)).to(src.device)
+
+output = model(src, tgt, src_mask, tgt_mask)
+print("Model Output Shape:", output.shape)
