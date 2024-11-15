@@ -1,0 +1,54 @@
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+import matplotlib.pyplot as plt
+
+# Step 1: Cosine Similarity for Multiple Items (Multi-Dimensional)
+def compute_cosine_similarity(data):
+    cos_sim_matrix = cosine_similarity(data)
+    return cos_sim_matrix
+
+# Example data (multi-dimensional vectors)
+data = np.array([
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+    [1, 0, 1],
+    [0, 1, 0]
+])
+cos_sim_matrix = compute_cosine_similarity(data)
+print("Cosine Similarity Matrix for Multiple Items:\n", cos_sim_matrix)
+
+# Step 2: Improve Cosine Similarity (Centering)
+def center_vectors(vectors):
+    mean_vector = np.mean(vectors, axis=0)
+    centered_vectors = vectors - mean_vector
+    return centered_vectors
+
+centered_data = center_vectors(data)
+cos_sim_centered = compute_cosine_similarity(centered_data)
+print("\nCosine Similarity Matrix with Centering:\n", cos_sim_centered)
+
+# Step 3: Cosine Similarity Using Indicator Functions (Binary Vectors)
+binary_vectors = np.array([
+    [1, 0, 1, 1],
+    [0, 1, 0, 1],
+    [1, 1, 1, 0]
+])
+cos_sim_binary = compute_cosine_similarity(binary_vectors)
+print("\nCosine Similarity Matrix for Binary Vectors:\n", cos_sim_binary)
+
+# Visualization of Similarity Matrices
+def visualize_similarity(matrix, title):
+    plt.figure(figsize=(6, 6))
+    plt.imshow(matrix, cmap="coolwarm", interpolation="nearest")
+    plt.title(title)
+    plt.colorbar(label="Cosine Similarity")
+    plt.xticks(range(matrix.shape[0]), [f"Item {i+1}" for i in range(matrix.shape[0])], rotation=45)
+    plt.yticks(range(matrix.shape[0]), [f"Item {i+1}" for i in range(matrix.shape[0])])
+    plt.grid(False)
+    plt.show()
+
+# Visualize all similarity matrices
+visualize_similarity(cos_sim_matrix, "Cosine Similarity (Original Data)")
+visualize_similarity(cos_sim_centered, "Cosine Similarity (Centered Data)")
+visualize_similarity(cos_sim_binary, "Cosine Similarity (Binary Vectors)")
