@@ -1,0 +1,53 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cross_decomposition import CCA
+
+# Generate synthetic data for demonstration
+np.random.seed(42)
+X = np.random.randn(100, 3)  # Data matrix X (100 samples, 3 features)
+Y = 2 * X + np.random.randn(100, 3)  # Correlated data matrix Y
+
+# Step 1: Variance-Covariance Matrix
+# Compute covariance matrix for X
+cov_matrix_X = np.cov(X, rowvar=False)
+
+print("Variance-Covariance Matrix of X:")
+print(cov_matrix_X)
+
+# Step 2: Principal Component Analysis (PCA) using SVD
+U, S, VT = np.linalg.svd(cov_matrix_X)
+explained_variances = S / np.sum(S)
+
+print("\nPrincipal Components (PCA):")
+print("Singular Values (Variance Explained):", S)
+print("Explained Variance Ratios:", explained_variances)
+
+# Step 3: Canonical Correlation Analysis (CCA) using SVD
+cca = CCA(n_components=2)
+cca.fit(X, Y)
+X_c, Y_c = cca.transform(X, Y)
+
+# Print results of Canonical Correlation Analysis
+print("\nCanonical Correlation Analysis (CCA):")
+print("Transformed X (Canonical Variables):\n", X_c[:5])  # Show first 5 samples
+print("Transformed Y (Canonical Variables):\n", Y_c[:5])  # Show first 5 samples
+
+# Visualize the PCA results (scatter plot of first 2 components)
+plt.figure(figsize=(10, 6))
+plt.scatter(X @ VT[0], X @ VT[1], alpha=0.7, label='PCA Components')
+plt.title("PCA Scatter Plot (First Two Principal Components)")
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.legend()
+plt.grid()
+plt.show()
+
+# Visualize the CCA results (scatter plot of canonical variables)
+plt.figure(figsize=(10, 6))
+plt.scatter(X_c[:, 0], Y_c[:, 0], alpha=0.7, label='Canonical Variables')
+plt.title("CCA Scatter Plot (First Canonical Variables)")
+plt.xlabel("Canonical Variable 1 (X)")
+plt.ylabel("Canonical Variable 1 (Y)")
+plt.legend()
+plt.grid()
+plt.show()
