@@ -1,0 +1,56 @@
+import numpy as np
+import pandas as pd
+from sklearn.impute import SimpleImputer
+from sklearn.decomposition import TruncatedSVD
+import matplotlib.pyplot as plt
+
+# Step 1: Create a Ratings Matrix (Users x Products)
+ratings_data = {
+    "Product A": [5, 4, np.nan, 3, np.nan],
+    "Product B": [3, np.nan, 4, 5, 2],
+    "Product C": [np.nan, 2, 5, np.nan, 4],
+    "Product D": [4, 5, np.nan, 4, 3],
+    "Product E": [np.nan, 3, 2, np.nan, 5],
+}
+ratings_matrix = pd.DataFrame(ratings_data, index=["User 1", "User 2", "User 3", "User 4", "User 5"])
+print("Ratings Matrix:\n", ratings_matrix)
+
+# Step 2: Calculate Average Ratings (for products and users)
+product_means = ratings_matrix.mean()
+user_means = ratings_matrix.mean(axis=1)
+print("\nAverage Ratings (Per Product):\n", product_means)
+print("\nAverage Ratings (Per User):\n", user_means)
+
+# Step 3: Impute Missing Values with Mean (Simple Method)
+imputer = SimpleImputer(strategy="mean")
+ratings_filled = pd.DataFrame(imputer.fit_transform(ratings_matrix), index=ratings_matrix.index, columns=ratings_matrix.columns)
+print("\nRatings Matrix with Imputed Values:\n", ratings_filled)
+
+# Step 4: Collaborative Filtering (Matrix Factorization using SVD)
+svd = TruncatedSVD(n_components=2)
+user_factors = svd.fit_transform(ratings_filled)
+product_factors = svd.components_
+
+# Predicted Ratings Matrix
+predicted_ratings = np.dot(user_factors, product_factors)
+predicted_ratings_df = pd.DataFrame(predicted_ratings, index=ratings_matrix.index, columns=ratings_matrix.columns)
+print("\nPredicted Ratings Matrix (Collaborative Filtering):\n", predicted_ratings_df)
+
+# Step 5: Visualize Original vs Predicted Ratings
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 2, 1)
+plt.imshow(ratings_matrix, cmap="coolwarm", interpolation="nearest", aspect="auto")
+plt.title("Original Ratings Matrix")
+plt.colorbar(label="Rating")
+plt.xticks(range(len(ratings_matrix.columns)), ratings_matrix.columns, rotation=45)
+plt.yticks(range(len(ratings_matrix.index)), ratings_matrix.index)
+
+plt.subplot(1, 2, 2)
+plt.imshow(predicted_ratings_df, cmap="coolwarm", interpolation="nearest", aspect="auto")
+plt.title("Predicted Ratings Matrix")
+plt.colorbar(label="Rating")
+plt.xticks(range(len(predicted_ratings_df.columns)), predicted_ratings_df.columns, rotation=45)
+plt.yticks(range(len(predicted_ratings_df.index)), predicted_ratings_df.index)
+
+plt.tight_layout()
+plt.show()
