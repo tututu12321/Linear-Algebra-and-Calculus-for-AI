@@ -1,0 +1,77 @@
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.decomposition import TruncatedSVD
+import matplotlib.pyplot as plt
+
+# Step 1: Create a Ratings Matrix with Missing Values
+ratings_data = {
+    "Item 1": [5, 4, np.nan, 3, np.nan],
+    "Item 2": [3, np.nan, 4, 5, 2],
+    "Item 3": [np.nan, 2, 5, np.nan, 4],
+    "Item 4": [4, 5, np.nan, 4, 3],
+    "Item 5": [np.nan, 3, 2, np.nan, 5],
+}
+ratings_matrix = pd.DataFrame(ratings_data, index=["User 1", "User 2", "User 3", "User 4", "User 5"])
+print("Original Ratings Matrix:\n", ratings_matrix)
+
+# Step 2: Collaborative Filtering (CF)
+def collaborative_filtering(ratings_matrix):
+    # Fill missing values with column means for similarity calculation
+    filled_ratings = ratings_matrix.apply(lambda col: col.fillna(col.mean()), axis=0)
+    
+    # Compute user-user similarity matrix
+    similarity_matrix = cosine_similarity(filled_ratings)
+    similarity_df = pd.DataFrame(similarity_matrix, index=ratings_matrix.index, columns=ratings_matrix.index)
+    
+    # Predict missing values
+    predicted_ratings = ratings_matrix.copy()
+    for user in ratings_matrix.index:
+        for item in ratings_matrix.columns:
+            if pd.isna(ratings_matrix.at[user, item]):
+                # Compute weighted average based on similarity
+                other_users = ratings_matrix[~ratings_matrix[item].isna()].index
+                weights = similarity_df.loc[user, other_users]
+                ratings = ratings_matrix.loc[other_users, item]
+                predicted_ratings.at[user, item] = np.dot(weights, ratings) / np.sum(weights)
+    return predicted_ratings
+
+cf_ratings = collaborative_filtering(ratings_matrix)
+print("\nCollaborative Filtering Predicted Ratings:\n", cf_ratings)
+
+# Step 3: Matrix Factorization (MF)
+def matrix_factorization(ratings_matrix, n_factors=2):
+    # Fill missing values with column means for initial approximation
+    filled_ratings = ratings_matrix.apply(lambda col: col.fillna(col.mean()), axis=0)
+    
+    # Perform SVD
+    svd = TruncatedSVD(n_components=n_factors)
+    user_factors = svd.fit_transform(filled_ratings)
+    item_factors = svd.components_
+    
+    # Predict ratings
+    predicted_ratings = np.dot(user_factors, item_factors)
+    return pd.DataFrame(predicted_ratings, index=ratings_matrix.index, columns=ratings_matrix.columns)
+
+mf_ratings = matrix_factorization(ratings_matrix)
+print("\nMatrix Factorization Predicted Ratings:\n", mf_ratings)
+
+# Step 4: Comparison of Results
+def visualize_matrices(original, cf, mf):
+    plt.figure(figsize=(15, 5))
+    matrices = [original.fillna(0), cf, mf]
+    titles = ["Original Ratings", "Collaborative Filtering", "Matrix Factorization"]
+    
+    for i, (matrix, title) in enumerate(zip(matrices, titles)):
+        plt.subplot(1, 3, i + 1)
+        plt.imshow(matrix, cmap="coolwarm", interpolation="nearest")
+        plt.title(title)
+        plt.colorbar(label="Rating")
+        plt.xticks(range(len(matrix.columns)), matrix.columns, rotation=45)
+        plt.yticks(range(len(matrix.index)), matrix.index)
+        plt.grid(False)
+    
+    plt.tight_layout()
+    plt.show()
+
+visualize_matrices(ratings_matrix, cf_ratings, mf_ratings)
