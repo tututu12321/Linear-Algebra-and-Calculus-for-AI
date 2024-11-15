@@ -1,0 +1,25 @@
+import numpy as np
+from scipy.stats import norm
+import matplotlib.pyplot as plt
+
+# Define parameters of the normal distribution
+mu = 0    # Mean
+sigma = 1 # Standard deviation
+
+# Calculate entropy of the normal distribution
+entropy = 0.5 * np.log(2 * np.pi * np.e * sigma**2)
+print(f"Entropy of the normal distribution: H(X) = {entropy:.4f}")
+
+# Generate data for the PDF
+x = np.linspace(mu - 4*sigma, mu + 4*sigma, 1000)
+pdf = norm.pdf(x, loc=mu, scale=sigma)
+
+# Plot the PDF of the normal distribution
+plt.figure(figsize=(10, 6))
+plt.plot(x, pdf, label=f'N({mu}, {sigma}²)', color='blue')
+plt.title('Probability Density Function of the Normal Distribution')
+plt.xlabel('x')
+plt.ylabel('PDF')
+plt.legend()
+plt.grid()
+plt.show()
