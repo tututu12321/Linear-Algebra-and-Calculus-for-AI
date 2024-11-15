@@ -1,0 +1,65 @@
+import numpy as np
+import pandas as pd
+from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.decomposition import TruncatedSVD
+import matplotlib.pyplot as plt
+
+# Step 1: Create a Dataset with Missing Values
+data = {
+    "Feature 1": [1.2, 2.3, np.nan, 4.5, 5.6],
+    "Feature 2": [np.nan, 3.3, 3.5, 4.7, 5.8],
+    "Feature 3": [2.1, np.nan, 3.4, 4.6, 5.9],
+    "Feature 4": [1.5, 2.6, np.nan, 4.8, 5.7],
+}
+df = pd.DataFrame(data)
+print("Original Dataset with Missing Values:\n", df)
+
+# Step 2: Mean/Median Imputation
+mean_imputer = SimpleImputer(strategy="mean")
+median_imputer = SimpleImputer(strategy="median")
+mean_imputed = pd.DataFrame(mean_imputer.fit_transform(df), columns=df.columns)
+median_imputed = pd.DataFrame(median_imputer.fit_transform(df), columns=df.columns)
+
+print("\nMean Imputed Dataset:\n", mean_imputed)
+print("\nMedian Imputed Dataset:\n", median_imputed)
+
+# Step 3: k-Nearest Neighbors (k-NN) Imputation
+knn_imputer = KNNImputer(n_neighbors=2)
+knn_imputed = pd.DataFrame(knn_imputer.fit_transform(df), columns=df.columns)
+print("\nk-NN Imputed Dataset:\n", knn_imputed)
+
+# Step 4: Matrix Factorization (SVD) Imputation
+def svd_impute(dataframe, n_components=2):
+    df_copy = dataframe.copy()
+    nan_mask = np.isnan(df_copy.values)
+    mean_values = np.nanmean(df_copy.values, axis=0)
+    df_copy = np.where(nan_mask, mean_values, df_copy.values)
+    svd = TruncatedSVD(n_components=n_components)
+    transformed_data = svd.fit_transform(df_copy)
+    reconstructed_data = svd.inverse_transform(transformed_data)
+    return pd.DataFrame(reconstructed_data, columns=dataframe.columns)
+
+svd_imputed = svd_impute(df)
+print("\nSVD Imputed Dataset:\n", svd_imputed)
+
+# Step 5: Visualization of Imputation Results
+imputed_datasets = {
+    "Mean Imputation": mean_imputed,
+    "Median Imputation": median_imputed,
+    "k-NN Imputation": knn_imputed,
+    "SVD Imputation": svd_imputed,
+}
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+axes = axes.flatten()
+for i, (title, dataset) in enumerate(imputed_datasets.items()):
+    axes[i].imshow(dataset, cmap="coolwarm", interpolation="nearest")
+    axes[i].set_title(title)
+    axes[i].set_xticks(range(len(dataset.columns)))
+    axes[i].set_xticklabels(dataset.columns, rotation=45)
+    axes[i].set_yticks(range(len(dataset)))
+    axes[i].set_yticklabels([f"Row {j+1}" for j in range(len(dataset))])
+    axes[i].grid(False)
+
+plt.tight_layout()
+plt.show()
