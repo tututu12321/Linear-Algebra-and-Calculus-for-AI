@@ -1,0 +1,62 @@
+import numpy as np
+import pandas as pd
+from sklearn.decomposition import TruncatedSVD
+import matplotlib.pyplot as plt
+
+# Step 1: Create a User-Item Ratings Matrix
+ratings_data = {
+    "Item 1": [5, 4, np.nan, 3, np.nan],
+    "Item 2": [3, np.nan, 4, 5, 2],
+    "Item 3": [np.nan, 2, 5, np.nan, 4],
+    "Item 4": [4, 5, np.nan, 4, 3],
+    "Item 5": [np.nan, 3, 2, np.nan, 5],
+}
+ratings_matrix = pd.DataFrame(ratings_data, index=["User 1", "User 2", "User 3", "User 4", "User 5"])
+print("Original Ratings Matrix:\n", ratings_matrix)
+
+# Step 2: Impute Missing Values (Mean Imputation for Initial Model)
+ratings_filled = ratings_matrix.apply(lambda col: col.fillna(col.mean()), axis=0)
+print("\nRatings Matrix with Imputed Values:\n", ratings_filled)
+
+# Step 3: Perform Matrix Factorization (SVD)
+svd = TruncatedSVD(n_components=2)  # Reduce to 2 latent factors
+user_factors = svd.fit_transform(ratings_filled)  # U matrix
+item_factors = svd.components_  # V^T matrix
+
+# Predicted Ratings
+predicted_ratings = np.dot(user_factors, item_factors)
+predicted_ratings_df = pd.DataFrame(predicted_ratings, index=ratings_matrix.index, columns=ratings_matrix.columns)
+print("\nPredicted Ratings Matrix:\n", predicted_ratings_df)
+
+# Step 4: Serendipity Adjustment
+def add_serendipity(predicted_matrix, original_matrix, alpha=0.5):
+    """
+    Adjust the recommendation by incorporating serendipity.
+    Alpha controls the trade-off between relevance and novelty.
+    """
+    novelty = np.random.random(predicted_matrix.shape)  # Random novelty scores
+    adjusted_matrix = alpha * predicted_matrix + (1 - alpha) * novelty
+    return pd.DataFrame(adjusted_matrix, index=original_matrix.index, columns=original_matrix.columns)
+
+adjusted_ratings = add_serendipity(predicted_ratings, ratings_matrix, alpha=0.7)
+print("\nAdjusted Ratings Matrix (With Serendipity):\n", adjusted_ratings)
+
+# Step 5: Visualization of Original, Predicted, and Adjusted Ratings
+def visualize_matrices(original, predicted, adjusted):
+    plt.figure(figsize=(15, 5))
+    matrices = [original, predicted, adjusted]
+    titles = ["Original Ratings", "Predicted Ratings", "Adjusted Ratings (Serendipity)"]
+    
+    for i, (matrix, title) in enumerate(zip(matrices, titles)):
+        plt.subplot(1, 3, i + 1)
+        plt.imshow(matrix, cmap="coolwarm", interpolation="nearest")
+        plt.title(title)
+        plt.colorbar(label="Rating")
+        plt.xticks(range(len(matrix.columns)), matrix.columns, rotation=45)
+        plt.yticks(range(len(matrix.index)), matrix.index)
+        plt.grid(False)
+    
+    plt.tight_layout()
+    plt.show()
+
+visualize_matrices(ratings_matrix.fillna(0), predicted_ratings_df, adjusted_ratings)
