@@ -1,0 +1,54 @@
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+import matplotlib.pyplot as plt
+
+# Step 1: Define the corpus of documents
+documents = [
+    "The cat sat on the mat.",
+    "The quick brown fox jumped over the lazy dog.",
+    "The dog barked at the mailman.",
+    "Cats and dogs are popular pets.",
+    "The mat was occupied by a lazy cat."
+]
+
+# Step 2: Compute TF-IDF values
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(documents)
+terms = vectorizer.get_feature_names_out()
+idf_values = vectorizer.idf_
+
+# Display IDF values
+print("Term IDF Values (Rarity):")
+for term, idf in zip(terms, idf_values):
+    print(f"Term: '{term}', IDF: {idf:.4f}")
+
+# Step 3: Visualize term rarity using logarithmic scaling
+plt.figure(figsize=(10, 6))
+plt.bar(terms, idf_values, color='skyblue')
+plt.title("Term Rarity (IDF) - Logarithmic Scaling")
+plt.xlabel("Terms")
+plt.ylabel("IDF Value (Logarithmic)")
+plt.xticks(rotation=45, ha="right")
+plt.grid(axis='y')
+plt.tight_layout()
+plt.show()
+
+# Explanation of Term Rarity (Inverse Proportionality and Logarithms)
+def calculate_idf(term_frequency, num_documents):
+    return np.log((num_documents + 1) / (term_frequency + 1)) + 1
+
+# Example for explanation
+num_documents = len(documents)
+term_frequencies = np.arange(1, num_documents + 1)
+
+idf_values_example = [calculate_idf(freq, num_documents) for freq in term_frequencies]
+
+# Plot IDF example for explanation
+plt.figure(figsize=(10, 6))
+plt.plot(term_frequencies, idf_values_example, marker='o', label='IDF')
+plt.title("IDF Value vs Term Frequency")
+plt.xlabel("Document Frequency (Number of Documents Containing the Term)")
+plt.ylabel("IDF Value")
+plt.grid()
+plt.legend()
+plt.show()
