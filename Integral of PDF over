@@ -1,0 +1,42 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import multivariate_normal
+from scipy.integrate import dblquad
+
+# Define the parameters of the multivariate normal distribution
+mean = [0, 0]  # Mean vector
+cov = [[1, 0.5], [0.5, 1]]  # Covariance matrix (positive semi-definite)
+
+# Generate grid points for visualization
+x, y = np.mgrid[-3:3:.01, -3:3:.01]  # Grid for x and y
+pos = np.dstack((x, y))  # Create a grid for multivariate input
+
+# Define the multivariate normal distribution
+rv = multivariate_normal(mean, cov)
+
+# Compute the PDF
+pdf = rv.pdf(pos)
+
+# Plot the PDF as a contour plot
+plt.figure(figsize=(8, 6))
+plt.contourf(x, y, pdf, cmap='viridis', levels=30)
+plt.colorbar(label="Probability Density")
+plt.title("Multivariate Normal Distribution PDF")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.grid()
+plt.show()
+
+# Integration of the PDF over a rectangular region
+# Define the integration limits
+x_lower, x_upper = -1, 1
+y_lower, y_upper = -1, 1
+
+# Perform the double integral of the PDF over the specified region
+integral, error = dblquad(
+    lambda x, y: rv.pdf([x, y]), x_lower, x_upper, lambda x: y_lower, lambda x: y_upper
+)
+
+# Display the integration result
+print(f"Integral of PDF over [{x_lower}, {x_upper}] x [{y_lower}, {y_upper}]: {integral:.4f}")
+print(f"Estimated error in integral: {error:.4e}")
