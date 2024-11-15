@@ -1,0 +1,33 @@
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+# Step 1: Define the ground truth and retrieved results
+# Binary labels: 1 for relevant, 0 for not relevant
+ground_truth = [1, 0, 1, 1, 0, 1, 0, 0, 1, 0]  # Ground truth relevance
+retrieved = [1, 1, 1, 1, 0, 0, 1, 0, 1, 0]     # Retrieved results relevance
+
+# Step 2: Calculate Precision and Recall
+precision = precision_score(ground_truth, retrieved)
+recall = recall_score(ground_truth, retrieved)
+
+# Step 3: Calculate F1-Score
+f1 = f1_score(ground_truth, retrieved)
+
+# Step 4: Display Results
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1-Score: {f1:.4f}")
+
+# Step 5: Visualization of Results
+import matplotlib.pyplot as plt
+import numpy as np
+
+categories = ['Precision', 'Recall', 'F1-Score']
+values = [precision, recall, f1]
+
+plt.figure(figsize=(8, 5))
+plt.bar(categories, values, color=['blue', 'green', 'orange'])
+plt.ylim(0, 1)
+plt.title('Search Results Evaluation Metrics')
+plt.ylabel('Score')
+plt.grid(axis='y')
+plt.show()
