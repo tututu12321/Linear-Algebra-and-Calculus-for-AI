@@ -1,0 +1,47 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+
+# Generate synthetic data for regression
+np.random.seed(42)
+n_samples = 100
+X = np.random.rand(n_samples, 1) * 10  # Random X values between 0 and 10
+y = 3 * X.flatten() + 7 + np.random.randn(n_samples) * 2  # y = 3x + 7 + noise
+
+# Add bias term to X (for the intercept)
+X_with_bias = np.hstack([np.ones((n_samples, 1)), X])
+
+# Compute pseudo-inverse
+pseudo_inverse = np.linalg.pinv(X_with_bias)
+
+# Solve for regression coefficients using pseudo-inverse
+theta = pseudo_inverse @ y
+
+# Extract intercept and slope
+intercept, slope = theta
+print(f"Intercept (using pseudo-inverse): {intercept:.4f}")
+print(f"Slope (using pseudo-inverse): {slope:.4f}")
+
+# Predict y values
+y_pred_pseudo_inverse = X_with_bias @ theta
+
+# Compare with sklearn's LinearRegression
+model = LinearRegression()
+model.fit(X, y)
+y_pred_sklearn = model.predict(X)
+
+print("\nComparison with sklearn's LinearRegression:")
+print(f"Intercept (sklearn): {model.intercept_:.4f}")
+print(f"Slope (sklearn): {model.coef_[0]:.4f}")
+
+# Plot the results
+plt.figure(figsize=(10, 6))
+plt.scatter(X, y, label="Data", alpha=0.7)
+plt.plot(X, y_pred_pseudo_inverse, label="Pseudo-Inverse Regression", color="red")
+plt.plot(X, y_pred_sklearn, label="sklearn Regression", color="green", linestyle="--")
+plt.title("Regression Analysis: Pseudo-Inverse vs. sklearn")
+plt.xlabel("X")
+plt.ylabel("y")
+plt.legend()
+plt.grid()
+plt.show()
