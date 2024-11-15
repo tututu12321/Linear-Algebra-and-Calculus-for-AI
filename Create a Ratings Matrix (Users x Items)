@@ -1,0 +1,73 @@
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Step 1: Create a Ratings Matrix (Users x Items)
+ratings_data = {
+    "Product A": [5, 4, np.nan, 3, np.nan],
+    "Product B": [3, np.nan, 4, 5, 2],
+    "Product C": [np.nan, 2, 5, np.nan, 4],
+    "Product D": [4, 5, np.nan, 4, 3],
+    "Product E": [np.nan, 3, 2, np.nan, 5],
+}
+ratings_matrix = pd.DataFrame(ratings_data, index=["User 1", "User 2", "User 3", "User 4", "User 5"])
+print("Original Ratings Matrix:\n", ratings_matrix)
+
+# Step 2: Impute Missing Values with Mean (for similarity calculation)
+ratings_filled = ratings_matrix.apply(lambda col: col.fillna(col.mean()), axis=0)
+print("\nRatings Matrix with Imputed Values:\n", ratings_filled)
+
+# Step 3: Calculate Cosine Similarity Between Users
+user_similarity = cosine_similarity(ratings_filled)
+user_similarity_df = pd.DataFrame(user_similarity, index=ratings_matrix.index, columns=ratings_matrix.index)
+print("\nUser Similarity Matrix (Cosine Similarity):\n", user_similarity_df)
+
+# Step 4: Predict Ratings for Missing Values
+def predict_ratings(ratings_matrix, user_similarity):
+    predicted_ratings = ratings_matrix.copy()
+
+    for user in ratings_matrix.index:
+        for item in ratings_matrix.columns:
+            if pd.isna(ratings_matrix.at[user, item]):
+                # Get indices of other users who rated this item
+                other_users = ratings_matrix[~ratings_matrix[item].isna()].index
+                
+                # Compute weighted average based on user similarity
+                weights = user_similarity_df.loc[user, other_users]
+                ratings = ratings_matrix.loc[other_users, item]
+                weighted_sum = np.dot(weights, ratings)
+                similarity_sum = np.sum(np.abs(weights))
+                
+                # Predict rating
+                predicted_ratings.at[user, item] = weighted_sum / similarity_sum if similarity_sum != 0 else np.nan
+    return predicted_ratings
+
+predicted_ratings = predict_ratings(ratings_matrix, user_similarity_df)
+print("\nPredicted Ratings Matrix (User-Based Collaborative Filtering):\n", predicted_ratings)
+
+# Step 5: Compare Original and Predicted Ratings
+def visualize_ratings(original, predicted, title1, title2):
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.imshow(original, cmap="coolwarm", interpolation="nearest", aspect="auto")
+    plt.title(title1)
+    plt.colorbar(label="Rating")
+    plt.xticks(range(len(original.columns)), original.columns, rotation=45)
+    plt.yticks(range(len(original.index)), original.index)
+
+    plt.subplot(1, 2, 2)
+    plt.imshow(predicted, cmap="coolwarm", interpolation="nearest", aspect="auto")
+    plt.title(title2)
+    plt.colorbar(label="Rating")
+    plt.xticks(range(len(predicted.columns)), predicted.columns, rotation=45)
+    plt.yticks(range(len(predicted.index)), predicted.index)
+
+    plt.tight_layout()
+    plt.show()
+
+visualize_ratings(
+    ratings_matrix.fillna(0),  # Replace NaN with 0 for visualization
+    predicted_ratings,
+    "Original Ratings Matrix (With Missing Values)",
+    "Predicted Ratings Matrix (User-Based Collaborative Filtering)",
+)
