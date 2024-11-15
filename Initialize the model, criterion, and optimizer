@@ -1,0 +1,83 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
+
+# Step 1: Load MNIST Dataset
+transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+
+train_dataset = datasets.MNIST(root="./data", train=True, download=True, transform=transform)
+test_dataset = datasets.MNIST(root="./data", train=False, download=True, transform=transform)
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
+
+# Step 2: Define the DNN Model
+class DNN(nn.Module):
+    def __init__(self):
+        super(DNN, self).__init__()
+        self.fc1 = nn.Linear(28 * 28, 128)  # Input layer
+        self.fc2 = nn.Linear(128, 64)      # Hidden layer
+        self.fc3 = nn.Linear(64, 10)       # Output layer
+
+    def forward(self, x):
+        x = x.view(-1, 28 * 28)  # Flatten input
+        x = torch.relu(self.fc1(x))  # Activation function for hidden layers
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)  # No activation for the output (raw logits)
+        return x
+
+# Step 3: Train the Model
+def train(model, train_loader, optimizer, criterion, epochs=5):
+    model.train()
+    for epoch in range(epochs):
+        total_loss = 0
+        for data, target in train_loader:
+            optimizer.zero_grad()  # Clear gradients
+            output = model(data)  # Forward pass
+            loss = criterion(output, target)  # Compute loss
+            loss.backward()  # Backpropagation
+            optimizer.step()  # Update weights
+            total_loss += loss.item()
+        print(f"Epoch {epoch + 1}, Loss: {total_loss / len(train_loader):.4f}")
+
+# Step 4: Evaluate the Model
+def evaluate(model, test_loader):
+    model.eval()
+    correct = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            output = model(data)
+            pred = output.argmax(dim=1, keepdim=True)  # Get the index of the max logit
+            correct += pred.eq(target.view_as(pred)).sum().item()
+    accuracy = correct / len(test_loader.dataset)
+    print(f"Test Accuracy: {accuracy:.4f}")
+
+# Step 5: Visualize Results
+def visualize_predictions(model, test_loader):
+    model.eval()
+    data, target = next(iter(test_loader))
+    with torch.no_grad():
+        output = model(data)
+    pred = output.argmax(dim=1)
+    
+    plt.figure(figsize=(10, 8))
+    for i in range(12):
+        plt.subplot(3, 4, i + 1)
+        plt.imshow(data[i][0].numpy(), cmap="gray")
+        plt.title(f"Pred: {pred[i].item()}, True: {target[i].item()}")
+        plt.axis("off")
+    plt.tight_layout()
+    plt.show()
+
+# Initialize the model, criterion, and optimizer
+model = DNN()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# Train and evaluate the model
+train(model, train_loader, optimizer, criterion, epochs=5)
+evaluate(model, test_loader)
+visualize_predictions(model, test_loader)
